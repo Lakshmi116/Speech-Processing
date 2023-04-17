@@ -3,121 +3,91 @@ import data as dt
 import lstm as ll  
 import os
 import torch
+import torch.nn as nn 
 from torch.utils.data import DataLoader
+from torchvision.transforms import Lambda, ToTensor
+from python_speech_features import mfcc
+from scipy.io import wavfile
+from sklearn.preprocessing import StandardScaler
+
 
 # Get Device for trainng 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-
 print(f"Running on Device: {device}")
 print(f"Using PyTorch Version: {torch.__version__}")
+print(f"")
 
+# Data ROOT 
+data_dir =  "./home/gdata/narayana/Lakshmi/Data/"
 
+# Dataset and Dataloader
+train_l = dt.SpeechDataset(
+             annotations=os.path.join(data_dir, "train_annotations.csv"),
+             data_dir=data_dir,
+             transform=Lambda(lambda x: input_transform(x)),
+             target_transform=None
+)
+train_dl = DataLoader(train_l, batch_size=4, shuffle=True )
 
-# Storing all the model parameters in a dictionary for hyper parameter tuning
-"""Model Parameters"""
-model_parameters = {
-   "MAX_FRAMES": 250,
-   "MAX_LABEL": 15,
-   "ALPHABET_SIZE":27,
-   "LSTM_FEATURES": 13,
-   "LINEAR_FEATURES": 6,
-   "RELU_FEATURES": 3,
-   "TANH_FEATURES": 2
-}
+test_l = dt.SpeechDataset(
+             annotations=os.path.join(data_dir, "test_annotations.csv"),
+             data_dir=data_dir,
+             transform=Lambda(lambda x: input_transform(x)),
+             target_transform=None
+)
+test_dl = DataLoader(test_l, batch_size=4, shuffle=True)
 
-# --------------------------------------------------------
-# --------------------------------------------------------
+# Model Architechture
 
-"""
-    Tasks:
+# Training
+for batch, (X, y) in enumerate(train_dl):
+   print(batch, X.shape, y)
 
-    1. Complete tranform 
-    2. Complete target transform
-    3. Complete neural network baseline definitions
-    4. Play with the hyperparameters
-    5. Fine tune the hyperparameters
-    6. State all the parameters that are playing vital role 
-       in the entire simulation
-    """
+# Validation
 
-
-# --------------------------------------------------------
-# --------------------------------------------------------
-
-# Helper Functions
-def print_model_params(model_params, model_name="LSTM"):
-   print(f"Model Parameters for {model_name}")
-   for (param, val) in iter(model_parameters):
-      print(f"{param}: {val}")
-   print(f"\n")
-
-def print_model_output(y):
-   return 
-
-def print_model_input(x):
-   return 
-
-
-
-
-# Initialize lstm network
-sample_lstm_stack = ll.LSTM_Stack(
-         lstm_features=model_parameters["LSTM_FEATURES"],
-         linear_features=model_parameters["LINEAR_FEATURES"],
-         relu_features=model_parameters["RELU_FEATURES"],
-         tanh_features=model_parameters["TANH_FEATURES"],
-         max_frames=model_parameters["MAX_FRAMES"],
-         max_label=model_parameters["MAX_LABEL"],
-         alphabet_size=model_parameters["ALPHABET_SIZE"])
-
-# Input shape = (None, 13)
-sample_input_X = [torch.randn(300, 13), torch.randn(235, 13)]
-sample_output_y = [sample_lstm_stack(tensor) for tensor in sample_input_X]
-
-for batch, tensor in enumerate(sample_output_y):
-   print(f"")
-   print(f"Tensor {batch}:")
-   print(f"Shape: ", tensor.shape)
-   print(f"Space:", tensor)
-   print(f"Max (dim=1):", tensor.max(dim=1))
-   
-
-""" Network Backlog:
-
-1. Loss function
-2. Network definition
-
-
-"""
-
-
-""" Data Backlog:
-
-1. Transform
-2. Target transform
-3. Annotations
-4. Train/Test Logic
-
- """
-
-# training_data = dt.Dataset_SpeechToString(annotations_file="annotations/path",
-#                                           data_dir="data-root-dir",
-#                                           transform=None,
-#                                           target_transform=None)
-
-# testing_data = dt.Dataset_SpeechToString(annotations_file="testing-annotations-file",
-#                                          data_dir = "data-root-dir",
-#                                          transform=None,
-#                                          target_transform=None)
-
-# train_dataloader = DataLoader(training_data, batch_size=4, shuffle=True)
-# test_dataloader = DataLoader(testing_data, batch_size=4, shuffle=True)
+# Summary
 
 
 
 
 
 
+# Tranforms
+def input_transform(audio_path):
+        # Reading from wav
+        sampling_frequency, audio_signal = wavfile.read(audio_path)
 
+        # Calculating MFCC
+        mfcc_ = mfcc(audio_signal, sampling_frequency)
 
+        # Normalization
+        scaler = StandardScaler()
+        scaler = scaler.fit(mfcc_)
+        mfcc_ = scaler.transform(mfcc_)
+
+        x = torch.from_numpy(mfcc_)
+
+        # Convert to 250 frame tape
+        # Input form (None, 13)
+        # Pad with zeros at the end
+        MAX_FRAMES = 250
+        no_of_frames = x.shape[0]
+        if no_of_frames < MAX_FRAMES:
+            pad = MAX_FRAMES - no_of_frames
+            padder = nn.ZeroPad2d((0,0,0,pad))
+            x = padder(x)
+        
+        x = x[:MAX_FRAMES, :] # Truncate the signal to max_frames
+        return x 
+
+# Target transform
+def output_tranform(X):
+   idx_ = torch.max(X, dim=1)
+   alpha = "abcdefghijklmnopqrstuvwxyz "
+   s = ""
+   for idx in idx_:
+      if idx == 26:
+         continue
+      s += alpha[idx]
+   return s
 

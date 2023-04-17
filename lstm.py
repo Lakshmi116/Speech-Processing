@@ -46,15 +46,7 @@ class LSTM_Stack(nn.Module):
         )
 
     def forward(self, x):
-        # Input form (None, 13)
-        # Pad with zeros at the end
-        no_of_frames = x.shape[0]
-        if no_of_frames < self.max_frames:
-            pad = self.max_frames - no_of_frames
-            padder = nn.ZeroPad2d((0,0,0,pad))
-            x = padder(x)
         
-        x = x[:250, :] # Truncate the signal  
         # x = self.flatten_1(x) # Flatten the input
         # x = self.unflatten_1(x) # Unflatten for feeding it to the neural network
         
