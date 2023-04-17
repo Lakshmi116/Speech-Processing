@@ -1,1 +1,4 @@
-./Data/
+Data/
+DustBin/
+__pycache__/
+.vscode/

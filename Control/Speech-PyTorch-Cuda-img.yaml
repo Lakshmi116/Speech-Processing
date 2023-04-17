@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: narayana
+spec:
+  securityContext:
+    runAsUser: 3071
+    fsGroup: 3071
+  containers:
+    - name: tf-container
+      # Below line needed to modify: Name of the docker image you want to run. The Kubernetes will pull the image from docker hub. 
+      image: lakshmi116/pytorch-cuda-speech-colorama:latest
+      # Below line needed to modify: Name of the script you want to run 
+      command: [ "/bin/bash", "/home/gdata/narayana/Lakshmi/Control/simulate.sh" ]
+      resources:
+        limits:
+          nvidia.com/gpu: 1
+      volumeMounts:
+        - name: nfs-data
+          mountPath: /home/gdata/narayana/
+  volumes:
+  - name: nfs-data
+    hostPath:
+      path: /home/gdata/narayana/
+      type: Directory
+  restartPolicy: Never
