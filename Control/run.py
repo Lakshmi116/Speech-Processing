@@ -67,7 +67,7 @@ class KubernetesRunner():
                 execution_time = round(current_time - start_time, 2)
                 print(Style.RESET_ALL + f"Execution time: {execution_time}s")
                 print(f"")
-                print(Fore.WHITE + f"Log file contents:")
+                print(Fore.WHITE + f"Debug Output:")
                 print(f"--------------------" + Style.RESET_ALL)
                 os.system(f"bash {self.log_script}")
                 print(f"")

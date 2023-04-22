@@ -1,13 +1,86 @@
-#
-# Imports
 import torch
 from torch import nn
 
+class Model(nn.Module):
+    def __init__(self, batch_size):
+        super().__init__()
 
-#
-# Model Architecture
-#
-#
+        self.batch_size=batch_size
+        
+        # Is (1, (250,13))
+        self.lstm_1 = nn.LSTM(
+                        input_size=13, #Given
+                        hidden_size=3, #Sample
+                        num_layers=3, #Sample 
+                        batch_first=True, #Sample 
+                        dropout=0.2, # Sample
+                        bidirectional=False, #Default 
+                        proj_size=0 #Default
+                        ).double().cuda()
+        # Is (1, (250,3))
+        self.flatten_1 = nn.Flatten(start_dim=1, end_dim=2).double().cuda()
+        self.linear_1 = nn.Linear(in_features=750, out_features=540).double().cuda()
+
+    
+    def forward(self, x):
+        out, hidden = self.lstm_1(x)
+        out = self.flatten_1(out)
+        out = self.linear_1(out)
+        out = out.view(self.batch_size, 20, 27)
+        return out
+
+"""
+What is backward?
+Ans:  
+
+"""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class LSTM_Stack(nn.Module):
     def __init__(self, lstm_features, linear_features, relu_features, tanh_features, max_frames, max_label, alphabet_size):
