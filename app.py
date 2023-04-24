@@ -14,10 +14,17 @@ from sklearn.preprocessing import StandardScaler
 
 
 # Get Device for trainng 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Running on Device: {device}")
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"Running on Device: {DEVICE}")
 print(f"Using PyTorch Version: {torch.__version__}")
 print(f"")
+
+# Constants
+BATCH_SIZE = 1
+ALPHABET_SIZE = 27
+MAX_LABEL = 20
+SPEAKER = "M01"
+DATA_DIR =  "./home/gdata/narayana/Lakshmi/Data/"
 
 # Tranforms
 def input_transform(audio_path):
@@ -35,6 +42,8 @@ def input_transform(audio_path):
 
         x = torch.from_numpy(mfcc_)
         x = x.type(torch.DoubleTensor)
+        x = x.cuda()
+      #   x = x.requires_grad_(True)
       #   print(x.dtype)
 
         # Convert to 250 frame tape
@@ -48,75 +57,84 @@ def input_transform(audio_path):
             x = padder(x)
         
         x = x[:MAX_FRAMES, :] # Truncate the signal to max_frames
-        return x.cuda()
+        return x.requires_grad_(True)
 
 # Target transform
+word_dict = {}
+def output_transform_onehot(y):
+   y = y.lower()
+   out = torch.zeros(460, device=DEVICE, dtype=torch.long)
+   if y in word_dict:
+      idx = word_dict[y]
+      out[idx] = 1
+   else:
+      word_dict[y] = len(word_dict)+1
+      idx = word_dict[y]
+      out[idx] = 1
+   return out 
+
+
+
 def output_tranform(y):
    y_len = len(y)
-   pad = 20 - y_len 
-   out = torch.zeros(20, 27)
-   alpha = "abcdefghijklmnop"
-   for i in range(y_len):
-      idx = alpha.find(y[i])
-      out[i][idx] = 1
+   pad = 20 - y_len
    if(pad < 0):
       print("Output size greater than 15")
+      return
+
+   out = torch.zeros(20, dtype=torch.long)
+   alpha = " abcdefghijklmnopqrstuvwxyz"
+
+   for i in range(y_len):
+      idx = alpha.find(y[i])
+      out[i] = idx
+   
    for i in range(y_len, 20):
-      out[i][26] = 1
+      out[i] = 0
    return out.cuda()
 
-# Levenshtein's loss
-# def levenshtein_loss(output, target):
-
-
-# Data ROOT 
-data_dir =  "./home/gdata/narayana/Lakshmi/Data/"
 
 # Dataset and Dataloader
 train_l = dt.SpeechDataset(
-             annotations=os.path.join(data_dir, "train_annotations.csv"),
-             data_dir=data_dir,
+             annotations=os.path.join(DATA_DIR, f"{SPEAKER}_train_annotations.csv"),
+             data_dir=DATA_DIR,
              transform=Lambda(lambda x: input_transform(x)),
-             target_transform=Lambda(lambda y: output_tranform(y))
+             target_transform=Lambda(lambda y: output_transform_onehot(y))
 )
-train_dl = DataLoader(train_l, batch_size=16, shuffle=False)
+train_dl = DataLoader(train_l, batch_size=BATCH_SIZE, shuffle=False)
 
 test_l = dt.SpeechDataset(
-             annotations=os.path.join(data_dir, "test_annotations.csv"),
-             data_dir=data_dir,
+             annotations=os.path.join(DATA_DIR, f"{SPEAKER}_test_annotations.csv"),
+             data_dir=DATA_DIR,
              transform=Lambda(lambda x: input_transform(x)),
-             target_transform=Lambda(lambda y: output_tranform(y))
+             target_transform=Lambda(lambda y: output_transform_onehot(y))
 )
-test_dl = DataLoader(test_l, batch_size=16, shuffle=False)
+test_dl = DataLoader(test_l, batch_size=BATCH_SIZE, shuffle=False)
+
+# Model
 
 
-x, target = next(iter(train_dl))
-# print(x)
-# Model Architechture
-mf = ll.Model(batch_size=16)
+model = ll.Model(batch_size=BATCH_SIZE)
+optim = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+loss_fn = nn.CrossEntropyLoss(reduction='mean')
 
-# Training
-batch_size = 16
-alphabet_size = 27
-max_label = 20
 
-weights = torch.tensor([1/27]*27, device=device)
-
-model = ll.Model(batch_size=16)
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-
-def bcewl(output, target):
-   return F.binary_cross_entropy_with_logits(output, target, weight=weights)
-
+# Training and Testing loops
 def training_loop(dataloader, model, loss_fn, optimizer):
    size = len(dataloader.dataset)
    for batch, (X, y) in enumerate(dataloader):
       output = model(X)
+
+      print(X.shape, output.shape, y.shape)
+      print(y[0])
       loss = loss_fn(output, y)
+
+      print(loss.shape)
 
       optimizer.zero_grad()
       loss.backward()
       optimizer.step()
+
 
       if batch % 100 == 0:
          loss, current = loss.item(), (batch+1)*len(X)
@@ -136,13 +154,19 @@ def test_loop(dataloader, model, loss_fn):
    print(f"Avg. Loss: , {test_loss:>8f}")
 
 
+"""
+-----------------------------------------------------------
+# Simulation
+-----------------------------------------------------------
+"""
+
 import time 
 start_time = time.time() 
-training_loop(train_dl, model, bcewl, optimizer)
+training_loop(train_dl, model, loss_fn, optim)
 end_time = time.time()
 
 print(f"runtime (1 epoch): {end_time - start_time}s")
 
 # model = models.vgg16(weights='IMAGENET1K_V1')
 models_dir = "./home/gdata/narayana/Lakshmi/SavedModels"
-torch.save(model.state_dict(), os.path.join(models_dir, "model_1") )
+torch.save(model.state_dict(), os.path.join(models_dir, "model_M01") )

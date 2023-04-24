@@ -7,33 +7,28 @@ class Model(nn.Module):
 
         self.batch_size=batch_size
         
-        # Is (1, (250,13))
         self.lstm_1 = nn.LSTM(
-                        input_size=13, #Given
-                        hidden_size=3, #Sample
-                        num_layers=3, #Sample 
-                        batch_first=True, #Sample 
-                        dropout=0.2, # Sample
-                        bidirectional=False, #Default 
-                        proj_size=0 #Default
+                        input_size=13,
+                        hidden_size=3, 
+                        num_layers=3, 
+                        batch_first=True, 
+                        dropout=0.2, 
+                        bidirectional=True,
                         ).double().cuda()
-        # Is (1, (250,3))
-        self.flatten_1 = nn.Flatten(start_dim=1, end_dim=2).double().cuda()
-        self.linear_1 = nn.Linear(in_features=750, out_features=540).double().cuda()
+        self.flatten_1 = nn.Flatten()
+        self.linear_1 = nn.Linear(1500, 920).double().cuda()
+        self.relu_1 = nn.ReLU()
+        self.linear_2 = nn.Linear(920, 460).double().cuda()
 
     
     def forward(self, x):
         out, hidden = self.lstm_1(x)
         out = self.flatten_1(out)
         out = self.linear_1(out)
-        out = out.view(self.batch_size, 20, 27)
+        out = self.relu_1(out)
+        out = self.linear_2(out)
+        # out = out.view(self.batch_size, 27, 20)
         return out
-
-"""
-What is backward?
-Ans:  
-
-"""
 
 
 
