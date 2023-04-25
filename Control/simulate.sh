@@ -1,5 +1,5 @@
 #!bin/bash
 
-python ./home/gdata/narayana/Lakshmi/app.py
+python ./home/gdata/narayana/Lakshmi/main.py
 
 
