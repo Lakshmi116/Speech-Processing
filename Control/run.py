@@ -75,15 +75,19 @@ class KubernetesRunner():
 
 class InputCode():
     def __init__(self, code="blank"):
-        self.code = "blank" 
+        self.code = code
     
     def forward(self, input):
         # Rules for the input
-        return self.blank_code(input)
+        if len(input) != 2:
+            print("Input doesn't specify the source to run")
+            return False
+        simulate_file = open("simulate.sh", "w")
+        run_this = f"python ./home/gdata/narayana/Lakshmi/{input[1]}.py"
+        simulate_file.write(run_this)
 
-    def blank_code(self, input):
-        return len(input) == 1
-
+        return True
+    
 
 def main():
     import sys

@@ -1,0 +1,10 @@
+
+Accuracy of test data
+Validation set size: 286
+Accurate: 21
+Validation Accuracy: 0.07342657446861267
+
+Accuracy on train data
+Validation set size: 694
+Accurate: 684
+Validation Accuracy: 0.9855907559394836

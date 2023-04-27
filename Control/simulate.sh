@@ -1,5 +1,1 @@
-#!bin/bash
-
-python ./home/gdata/narayana/Lakshmi/main.py
-
-
+python ./home/gdata/narayana/Lakshmi/core.py
