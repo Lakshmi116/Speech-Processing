@@ -23,7 +23,7 @@ print(f"")
 DATA_DIR =  "./home/gdata/narayana/Lakshmi/Data/"
 MODELS_DIR = "./home/gdata/narayana/Lakshmi/SavedModels"
 LOG_DIR = "./home/gdata/narayana/Lakshmi/ModelsSummary"
-CLASSMAP_PATH = os.path.join(DATA_DIR, "classmap52.csv")
+CLASSMAP_PATH = os.path.join(DATA_DIR, "classmap0_10.csv")
 
 # Transform
 def path_to_tensor(audio_path):
@@ -193,14 +193,15 @@ def main(speaker, tag, iteration, mode="test"):
 
 
     # Model Definition
-    model = Model52(13, 3, 128, 52)
+    model = Model52(13, 2, 32, 10)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     # optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     criterion = nn.CrossEntropyLoss()
-
+    
+    paramfile = open(os.path.join(LOG_DIR, MODEL_NAME+".param"), "a")
     if mode == "train":
         # Training 
-        EPOCHS = 50
+        EPOCHS = 100
         starttime = time.time()
         train_loop(train_dl, model, criterion, optimizer, EPOCHS, LOG_PATH)
         endtime = time.time()
@@ -208,6 +209,15 @@ def main(speaker, tag, iteration, mode="test"):
         # Save model
         print(f"Runtime: {endtime-starttime}, epochs: {EPOCHS}")
         torch.save(model.state_dict(), PATH)
+        paramfile.writelines([
+         f"Model: {MODEL_NAME}\n",
+         f"PyTorch_Total_Params: {sum(p.numel() for p in model.parameters())}\n",
+         f"PyTorch_Trainable_Params: {sum(p.numel() for p in model.parameters() if p.requires_grad)}\n",
+         f"Batch size:{BATCH_SIZE}"
+         f"Runtime: {endtime-starttime}\n",
+         f"Epochs: {EPOCHS}\n",
+         ])
+        
 
 
     
@@ -217,13 +227,13 @@ def main(speaker, tag, iteration, mode="test"):
     model.load_state_dict(torch.load(PATH))
     model.eval()
 
+    
+
     with torch.no_grad():
         test_loop(test_dl, model, EVAL_LOG_PATH, "Accuracy of test data")
         test_loop(train_dl, model, EVAL_LOG_PATH, "Accuracy on train data")
 
 if __name__ == "__main__":
-    run_ = [("F02", "start51", "iter3"),
-            ("F03", "start51", "iter3"),
-            ("M09", "start51", "iter3")]
+    run_ = [("F02_F03_F04_F05_M07_M08_M09_M10", "mfstart10", "iter1")]
     for speaker, tag, iteration in run_:
         main(speaker, tag, iteration, mode="train")

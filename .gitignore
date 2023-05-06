@@ -2,3 +2,5 @@ Data/
 DustBin/
 __pycache__/
 .vscode/
+SavedModels/
+ModelsSummary/
